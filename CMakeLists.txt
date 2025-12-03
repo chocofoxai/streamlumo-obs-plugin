@@ -127,11 +127,40 @@ if(APPLE)
         ${PLATFORM_LIBS}
     )
 elseif(WIN32)
-    # Windows: OBS plugins are loaded by OBS at runtime
-    # No need to link against obs.lib - symbols are resolved dynamically
-    target_link_libraries(streamlumo-plugin
-        ${PLATFORM_LIBS}
-    )
+    # Windows: Link against OBS import libraries
+    # OBS_LIB_DIR should point to the directory containing obs.lib
+    if(DEFINED OBS_LIB_DIR AND EXISTS "${OBS_LIB_DIR}/obs.lib")
+        message(STATUS "Found OBS import library at: ${OBS_LIB_DIR}")
+        target_link_libraries(streamlumo-plugin
+            ${PLATFORM_LIBS}
+            "${OBS_LIB_DIR}/obs.lib"
+            "${OBS_LIB_DIR}/obs-frontend-api.lib"
+        )
+    else()
+        # Fallback: Try to find obs.lib in typical locations
+        find_library(OBS_LIB obs PATHS
+            "C:/obs-studio-bin/bin/64bit"
+            "C:/Program Files/obs-studio/bin/64bit"
+        )
+        find_library(OBS_FRONTEND_LIB obs-frontend-api PATHS
+            "C:/obs-studio-bin/bin/64bit"
+            "C:/Program Files/obs-studio/bin/64bit"
+        )
+        
+        if(OBS_LIB)
+            message(STATUS "Found OBS library: ${OBS_LIB}")
+            target_link_libraries(streamlumo-plugin
+                ${PLATFORM_LIBS}
+                ${OBS_LIB}
+                ${OBS_FRONTEND_LIB}
+            )
+        else()
+            message(WARNING "OBS import libraries not found - build may fail at link time")
+            target_link_libraries(streamlumo-plugin
+                ${PLATFORM_LIBS}
+            )
+        endif()
+    endif()
 else()
     # Linux: Same approach - dynamic linking at runtime
     target_link_libraries(streamlumo-plugin
@@ -157,10 +186,11 @@ if(APPLE)
         LINK_FLAGS "-undefined dynamic_lookup"
     )
 elseif(WIN32)
-    # Windows: Allow unresolved external symbols - OBS will provide them at runtime
-    # This is similar to macOS's -undefined dynamic_lookup
-    set_target_properties(streamlumo-plugin PROPERTIES
-        LINK_FLAGS "/FORCE:UNRESOLVED"
+    # Windows: Define macros for OBS plugin
+    target_compile_definitions(streamlumo-plugin PRIVATE
+        OBS_PLUGIN
+        WIN32_LEAN_AND_MEAN
+        NOMINMAX
     )
 endif()
 
