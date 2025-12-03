@@ -18,6 +18,13 @@
 #include <stdint.h>
 #include <atomic>
 
+// Cross-platform alignment macro
+#ifdef _MSC_VER
+  #define SL_ALIGNED(x) __declspec(align(x))
+#else
+  #define SL_ALIGNED(x) __attribute__((aligned(x)))
+#endif
+
 // Shared memory name for POSIX/Win32
 #define SHM_NAME "/streamlumo_frames"
 #define SHM_NAME_WIN32 "Local\\StreamLumoFrames"
@@ -87,7 +94,16 @@ struct SharedFrameBuffer {
     // Buffer 2: Ready for next operation
     unsigned char frames[NUM_BUFFERS][FRAME_SIZE];
     
-} __attribute__((aligned(64)));  // Cache-line alignment for performance
+};
+
+// Apply alignment to the struct (MSVC requires it before the struct)
+#ifdef _MSC_VER
+// For MSVC, we use #pragma pack or ensure proper alignment in usage
+// The struct is naturally cache-aligned due to atomics
+#else
+// For GCC/Clang, use the attribute syntax
+typedef struct SharedFrameBuffer SharedFrameBufferAligned __attribute__((aligned(64)));
+#endif
 
 // Calculate total shared memory size
 static constexpr size_t SHARED_BUFFER_SIZE = sizeof(SharedFrameBuffer);

@@ -14,6 +14,11 @@ if(NOT DEFINED OBS_INCLUDE_DIR)
     set(OBS_INCLUDE_DIR "$ENV{OBS_HEADERS_DIR}/libobs")
     set(OBS_FRONTEND_API_DIR "$ENV{OBS_HEADERS_DIR}/frontend/api")
     set(OBS_ROOT_DIR "$ENV{OBS_HEADERS_DIR}")
+  elseif(WIN32 AND EXISTS "C:/obs-studio-headers/libobs")
+    # Windows CI path
+    set(OBS_INCLUDE_DIR "C:/obs-studio-headers/libobs")
+    set(OBS_FRONTEND_API_DIR "C:/obs-studio-headers/frontend/api")
+    set(OBS_ROOT_DIR "C:/obs-studio-headers")
   elseif(EXISTS "/tmp/obs-studio-headers/libobs")
     set(OBS_INCLUDE_DIR "/tmp/obs-studio-headers/libobs")
     set(OBS_FRONTEND_API_DIR "/tmp/obs-studio-headers/frontend/api")
@@ -131,8 +136,14 @@ endif()
 set_target_properties(streamlumo-plugin PROPERTIES
     PREFIX ""
     OUTPUT_NAME "streamlumo-plugin"
-    SUFFIX ".so"
 )
+
+# Platform-specific suffix
+if(WIN32)
+    set_target_properties(streamlumo-plugin PROPERTIES SUFFIX ".dll")
+else()
+    set_target_properties(streamlumo-plugin PROPERTIES SUFFIX ".so")
+endif()
 
 if(APPLE)
     set_target_properties(streamlumo-plugin PROPERTIES
