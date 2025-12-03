@@ -120,14 +120,21 @@ endif()
 
 target_include_directories(streamlumo-plugin PRIVATE ${PLUGIN_INCLUDE_DIRS})
 
-# Link libraries - Framework for macOS
+# Link libraries - OBS plugins use dynamic linking at runtime
 if(APPLE)
+    # macOS: Use undefined dynamic_lookup to resolve OBS symbols at runtime
+    target_link_libraries(streamlumo-plugin
+        ${PLATFORM_LIBS}
+    )
+elseif(WIN32)
+    # Windows: OBS plugins are loaded by OBS at runtime
+    # No need to link against obs.lib - symbols are resolved dynamically
     target_link_libraries(streamlumo-plugin
         ${PLATFORM_LIBS}
     )
 else()
+    # Linux: Same approach - dynamic linking at runtime
     target_link_libraries(streamlumo-plugin
-        ${LIBOBS_LIBRARIES}
         ${PLATFORM_LIBS}
     )
 endif()
@@ -148,6 +155,12 @@ endif()
 if(APPLE)
     set_target_properties(streamlumo-plugin PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup"
+    )
+elseif(WIN32)
+    # Windows: Allow unresolved external symbols - OBS will provide them at runtime
+    # This is similar to macOS's -undefined dynamic_lookup
+    set_target_properties(streamlumo-plugin PROPERTIES
+        LINK_FLAGS "/FORCE:UNRESOLVED"
     )
 endif()
 
